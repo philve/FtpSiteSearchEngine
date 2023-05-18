@@ -1,6 +1,7 @@
 # FtpSiteSearchEngine
 
-这是一个用 *python3.5* 写的FTP站点搜索引擎，指定搜索IP段 (限制为只搜索最后 8 比特位的范围) 后即可多线程搜索，然后用目录树列出每个匿名登录的站点的顶层目录结构，这个是学校的一个小作业来的，十分之水，求不小心看到的大神轻喷。至于为啥放到 GitHub 上，大概是我比较厚脸皮吧，权且做个记录。以下为截图：
+This is an FTP site search engine written in python 3.5, specify the search IP segment (limited to the last 8 bits of the search range) after multi-threaded search, and then use the directory tree to list the top-level directory structure of each anonymously logged in site, this is a small homework from the school, ten water, please accidentally see the god light spray. As for why I put it on GitHub, probably I'm cheeky, right to make a record. Here is a screenshot:
+
 
 ![初始页面](2.png)
 
