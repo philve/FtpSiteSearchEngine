@@ -3,8 +3,9 @@
 import tkinter.messagebox
 from datetime import datetime
 from tkinter import *
-
 import search
+import logging
+logging.basicConfig(level=logging.INFO)
 
 class Application(Frame):
     def __init__(self, master=None):
