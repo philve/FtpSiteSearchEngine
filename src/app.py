@@ -1,57 +1,118 @@
 # -*- coding: utf-8 -*-
 
-"""
-    This module implements the GUI of FtpSiteSearchEngine.
-
-    :author: Sam Yang (samyangcoder@gmail.com)
-    :license: MIT
-"""
-
+import tkinter.messagebox
+from datetime import datetime
 from tkinter import *
+
 import search
-import logging
-logging.basicConfig(level=logging.INFO)
 
-
-# Application 是组件容器，继承自 Frame
 class Application(Frame):
-    # master 是父组件(widget)，可选，传递给 Application 的实例
     def __init__(self, master=None):
         Frame.__init__(self, master)
 
-        self.promptText = Label(text='please input ip range you want to search below', font='"Comic Sans MS" 24')
-        self.promptText.place(x=138, y=100)
-        logging.info('[gui module]promptText width is %s' % self.promptText.winfo_reqwidth())
+        self.ipListLabel = Label(text='Enter IP list (one IP per line):', font='"Comic Sans MS" 14')
+        self.ipListLabel.place(x=20, y=20)
 
-        self.ipFrom = Entry(width=30, justify=CENTER)
-        self.ipFrom.place(x=99, y=200)
-        logging.info('[gui module]ipFrom/ipTo width is %s' % self.ipFrom.winfo_reqwidth())
+        self.ipList = Text(width=30, height=5)
+        self.ipList.place(x=20, y=50)
 
-        self.divider = Label(text='—')
-        self.divider.place(x=390, y=202)
+        self.fileTypeLabel = Label(text='Filter by file type (e.g., .txt):', font='"Comic Sans MS" 14')
+        self.fileTypeLabel.place(x=20, y=150)
 
-        self.ipTo = Entry(width=30, justify=CENTER)
-        self.ipTo.place(x=417, y=200)
+        self.fileType = Entry(width=30)
+        self.fileType.place(x=20, y=180)
 
-        self.searchButton = Button(width=20, text='Search', command=self.send_input)
-        self.searchButton.place(x=296, y=300)
-        logging.info('[gui module]searchButton width is %s' % self.searchButton.winfo_reqwidth())
+        self.nameContainsLabel = Label(text='Filter by name contains (e.g., report):', font='"Comic Sans MS" 14')
+        self.nameContainsLabel.place(x=20, y=210)
 
-        self.loading = Label(text='searching...', font='"Comic Sans MS" 24')
+        self.nameContains = Entry(width=30)
+        self.nameContains.place(x=20, y=240)
+
+        self.dateRangeLabel = Label(text='Filter by date range (YYYY-MM-DD - YYYY-MM-DD):', font='"Comic Sans MS" 14')
+        self.dateRangeLabel.place(x=20, y=270)
+
+        self.dateRange = Entry(width=30)
+        self.dateRange.place(x=20, y=300)
+
+        self.sizeRangeLabel = Label(text='Filter by size range (Min - Max in bytes):', font='"Comic Sans MS" 14')
+        self.sizeRangeLabel.place(x=20, y=330)
+
+        self.minSize = Entry(width=12)
+        self.minSize.place(x=20, y=360)
+
+        self.maxSize = Entry(width=12)
+        self.maxSize.place(x=150, y=360)
+
+        self.searchButton = Button(width=10, text='Search', command=self.send_input)
+        self.searchButton.place(x=20, y=400)
+
+        self.resultLabel = Label(text='Search Results:', font='"Comic Sans MS" 14')
+        self.resultLabel.place(x=300, y=20)
+
+        self.result = Listbox(width=60, height=20)
+        self.result.place(x=300, y=50)
+
+        self.loading = Label(text='Searching...', font='"Comic Sans MS" 14', fg='red')
+        self.loading.place(x=300, y=400)
+        self.loading.grid_remove()
 
     def send_input(self):
-        ip_from = self.ipFrom.get()
-        ip_to = self.ipTo.get()
+        ip_text = self.ipList.get("1.0", END)
+        ip_list = [ip.strip() for ip in ip_text.split('\n') if ip.strip()]
+        file_type = self.fileType.get().strip()
 
-        # 清除界面
-        for widget in self.master.place_slaves():
-            widget.place_forget()
-        logging.info('[gui module]loading width is %s' % self.loading.winfo_reqwidth())
-        self.loading.place(x=334, y=280)
+        name_contains = self.nameContains.get().strip()
+        date_range_str = self.dateRange.get().strip()
+        min_size_str = self.minSize.get().strip()
+        max_size_str = self.maxSize.get().strip()
 
-        self.loading.after(5, search.search, self, ip_from, ip_to)  # 在指定毫秒数后执行回调，以使执行回调前先渲染loading
+        date_range = None
+        min_size = None
+        max_size = None
+
+        if date_range_str:
+            try:
+                start_date_str, end_date_str = date_range_str.split('-')
+                start_date = datetime.strptime(start_date_str.strip(), '%Y-%m-%d')
+                end_date = datetime.strptime(end_date_str.strip(), '%Y-%m-%d')
+                date_range = (start_date, end_date)
+            except ValueError:
+                tkinter.messagebox.showerror("Invalid Date Range", "Please enter a valid date range in the format YYYY-MM-DD - YYYY-MM-DD.")
+                return
+
+        if min_size_str:
+            try:
+                min_size = int(min_size_str)
+            except ValueError:
+                tkinter.messagebox.showerror("Invalid Minimum Size", "Please enter a valid minimum size in bytes.")
+                return
+
+        if max_size_str:
+            try:
+                max_size = int(max_size_str)
+            except ValueError:
+                tkinter.messagebox.showerror("Invalid Maximum Size", "Please enter a valid maximum size in bytes.")
+                return
+
+        self.loading.grid()
+        q = search.Queue()
+        self.loading.after(5, search.search, q, ip_list, file_type, name_contains, date_range, min_size, max_size)
+        self.loading.after(5, self.show_results, q)
+
+    def show_results(self, q):
+        self.loading.grid_remove()
+        self.result.delete(0, END)
+
+        ftp_data = q.get()
+
+        if not ftp_data:
+            self.result.insert(END, "No results found.")
+
+        for ftp in ftp_data:
+            for f in ftp:
+                self.result.insert(END, f"{f[0]}: {f[1]}")
 
 app = Application()
-app.master.title('FTP Site Search Engine')
-app.master.geometry('800x600+200+100')  # `800x600`是窗口大小，`+200+100`为窗口位置
+app.master.title("FTP Search")
+app.master.geometry("800x500")
 app.mainloop()
